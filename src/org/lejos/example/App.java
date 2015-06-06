@@ -12,6 +12,9 @@ import lejos.nxt.Motor;
 public class App {
 
     private static final float DISTANCE_BETWEEN_SENSORS_CM = 5f;
+    public static final int CLOSE_DISTANCE_CM = 40;
+
+    private static float currentRotation = 0f;
 
     public static void main(String[] args) throws Exception {
         final long interval = 60000;
@@ -22,21 +25,42 @@ public class App {
                 ultrasonicDetectorForPort(SensorPort.S4),
                 DISTANCE_BETWEEN_SENSORS_CM
         );
-        final HackPilot p = new HackPilot(5f, Motor.A, Motor.B, 41, -150, 150);
+        final HackPilot p = new HackPilot(5f, Motor.A, Motor.B, 41, -50, 50);
 
         while (System.currentTimeMillis() - startTime < interval) {
             Feature feature = detector.scan();
             if (feature == null) {
-            	p.travel(10);
+                Motor.C.stop();
+                p.travelArc(-currentRotation, 20);
+                currentRotation = 0f;
                 continue;
             }
 
             RangeReading reading = feature.getRangeReading();
             System.out.println(reading.getAngle() + " " + reading.getRange());
-            if (reading.getAngle() > 0) {
-            	p.travelArc(600, 10);
+            if (reading.getAngle() < 0) {
+                Motor.C.forward();
+
+                currentRotation = (currentRotation + 30f) % 30;
+
+                if (reading.getRange() < CLOSE_DISTANCE_CM) {
+                    p.travelArc(-30, -40);
+                    p.travelArc(60, 40);
+                } else {
+                    p.travelArc(30, 40);
+                }
+
             } else {
-            	p.travelArc(-600, 10);            	
+                Motor.C.forward();
+
+                currentRotation = (currentRotation - 30f) % 30;
+
+                if (reading.getRange() < CLOSE_DISTANCE_CM) {
+                    p.travelArc(30, -40);
+                    p.travelArc(-60, 40);
+                } else {
+                    p.travelArc(-30, 40);
+                }
             }
         }
     }
